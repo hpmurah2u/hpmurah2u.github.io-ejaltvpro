@@ -1,17 +1,1416 @@
 <!DOCTYPE html>
-<html>
+<html lang="ms">
 <head>
 <meta charset="UTF-8">
-<title>EJALTV Protected Loader</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EJALTV Pro ULTIMATE - Premium Malaysia</title>
+<!-- JW Player -->
+<script src="https://cdn.jwplayer.com/libraries/IDzF9Zmk.js"></script>
+<!-- Font Awesome 6 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+
+<!-- ===== SEKSYEN KESELAMATAN: BLOCK VIEW SOURCE & INSPECT ===== -->
 <script>
-(function(){
-const data="PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9Im1zIj4KPGhlYWQ+CjxtZXRhIGNoYXJzZXQ9IlVURi04Ij4KPG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCwgaW5pdGlhbC1zY2FsZT0xLjAiPgo8dGl0bGU+RUpBTFRWIFBybyBVTFRJTUFURSAtIFByZW1pdW0gTWFsYXlzaWE8L3RpdGxlPgo8c2NyaXB0IHNyYz0iaHR0cHM6Ly9jZG4uandwbGF5ZXIuY29tL2xpYnJhcmllcy9JRHpGOVptay5qcyI+PC9zY3JpcHQ+CjxsaW5rIHJlbD0ic3R5bGVzaGVldCIgaHJlZj0iaHR0cHM6Ly9jZG5qcy5jbG91ZGZsYXJlLmNvbS9hamF4L2xpYnMvZm9udC1hd2Vzb21lLzYuNC4wL2Nzcy9hbGwubWluLmNzcyI+CjxsaW5rIGhyZWY9Imh0dHBzOi8vZm9udHMuZ29vZ2xlYXBpcy5jb20vY3NzMj9mYW1pbHk9T3JiaXRyb246d2dodEA0MDA7NzAwOzkwMCZkaXNwbGF5PXN3YXAiIHJlbD0ic3R5bGVzaGVldCI+CjwvaGVhZD4KPGJvZHk+CjxzY3JpcHQ+CmRvY3VtZW50LndyaXRlKCJPcmlnaW5hbCBIVE1MIGNvbnRlbnQgbG9hZGVkICh0cnVuY2F0ZWQgZm9yIGVuY29kaW5nIGRlbW8pLiBSZXBsYWNlIHdpdGggZnVsbCBjb2RlIGlmIG5lZWRlZC4iKTsKPC9zY3JpcHQ+CjwvYm9keT4KPC9odG1sPgo=";
-function d(x){return decodeURIComponent(escape(atob(x)));}
-document.open();
-document.write(d(data));
-document.close();
+// Block View Source, Inspect Element dan Right Click
+document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+document.addEventListener('keydown', function(e) {
+    // Block F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+S
+    if (e.key === 'F12' || 
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+        (e.ctrlKey && (e.key === 'U' || e.key === 'S'))) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // Block Ctrl+Shift+K (Firefox console)
+    if (e.ctrlKey && e.shiftKey && e.key === 'K') {
+        e.preventDefault();
+        return false;
+    }
+    
+    // Block Ctrl+Shift+E (Firefox debugger)
+    if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+        e.preventDefault();
+        return false;
+    }
+});
+
+// Override fungsi pembangunan (DevTools)
+setInterval(function() {
+    if (typeof window.devtools === 'undefined') {
+        window.devtools = { open: false };
+    }
+    
+    // Detect DevTools dengan memeriksa saiz tetingkap
+    var threshold = 160;
+    var widthThreshold = window.outerWidth - window.innerWidth > threshold;
+    var heightThreshold = window.outerHeight - window.innerHeight > threshold;
+    
+    if (widthThreshold || heightThreshold) {
+        // Jika DevTools dikesan, tutup paksa atau alihkan halaman
+        document.body.innerHTML = '<div style="color:white;background:black;height:100vh;display:flex;align-items:center;justify-content:center;font-family:Arial;text-align:center">' +
+                                  '<div><h1>⛔ Akses Ditolak</h1><p>Sila tutup alat pembangun (DevTools) untuk terus menonton.</p>' +
+                                  '<button onclick="location.reload()" style="padding:10px 20px;margin-top:20px;cursor:pointer">Muat Semula Halaman</button></div></div>';
+    }
+}, 1000);
+</script>
+
+<!-- ===== SEKSYEN KESELAMATAN: BLOCK DOWNLOAD STREAM ===== -->
+<script>
+// Block percubaan download stream dengan memantau aktiviti rangkaian
+(function() {
+    // Simpan fungsi asal
+    var originalFetch = window.fetch;
+    var originalXHROpen = XMLHttpRequest.prototype.open;
+    var originalXHRSend = XMLHttpRequest.prototype.send;
+    var originalCreateElement = document.createElement;
+    
+    // Senarai sambungan fail yang disekat untuk download
+    var blockedExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.flv', '.wmv', '.m3u8', '.mpd', '.ts', '.m4s', '.webm'];
+    
+    // Block download melalui anchor (link)
+    document.addEventListener('click', function(e) {
+        var target = e.target.closest('a');
+        if (target && target.href) {
+            var href = target.href.toLowerCase();
+            for (var ext of blockedExtensions) {
+                if (href.includes(ext) || href.includes('download') || href.includes('stream')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    alert('❌ Download stream tidak dibenarkan');
+                    return false;
+                }
+            }
+        }
+    }, true);
+    
+    // Override fetch untuk block download
+    window.fetch = function() {
+        var url = arguments[0] ? arguments[0].toString().toLowerCase() : '';
+        // Jika URL mengandungi perkataan download atau pattern stream
+        if (url.includes('download') || url.includes('save') || url.includes('dl?')) {
+            alert('❌ Download tidak dibenarkan');
+            return new Promise(function(resolve, reject) {
+                reject(new Error('Download blocked'));
+            });
+        }
+        return originalFetch.apply(this, arguments);
+    };
+    
+    // Override XMLHttpRequest untuk block download
+    XMLHttpRequest.prototype.open = function() {
+        var method = arguments[0] || '';
+        var url = arguments[1] ? arguments[1].toString().toLowerCase() : '';
+        
+        if (url.includes('download') || url.includes('save') || url.includes('dl?')) {
+            alert('❌ Download tidak dibenarkan');
+            // Buat error
+            this._blocked = true;
+        }
+        
+        return originalXHROpen.apply(this, arguments);
+    };
+    
+    XMLHttpRequest.prototype.send = function() {
+        if (this._blocked) {
+            alert('❌ Download tidak dibenarkan');
+            return;
+        }
+        return originalXHRSend.apply(this, arguments);
+    };
+    
+    // Block save image/video as
+    document.addEventListener('dragstart', function(e) {
+        e.preventDefault();
+        return false;
+    });
+    
+    // Block save as melalui shortcut
+    document.addEventListener('keydown', function(e) {
+        // Block Ctrl+S (save)
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            alert('❌ Fungsi save dilumpuhkan');
+            return false;
+        }
+        
+        // Block Ctrl+Shift+S (save as)
+        if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+            e.preventDefault();
+            alert('❌ Fungsi save as dilumpuhkan');
+            return false;
+        }
+    });
+    
+    // Sekat video download dengan memantau elemen video
+    var videoObserver = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeName === 'VIDEO' || (node.querySelector && node.querySelector('video'))) {
+                        var videos = node.nodeName === 'VIDEO' ? [node] : node.querySelectorAll('video');
+                        videos.forEach(function(video) {
+                            // Set attributes untuk block download
+                            video.setAttribute('controlslist', 'nodownload');
+                            video.setAttribute('disablepictureinpicture', 'false'); // PIP still allowed
+                            video.setAttribute('oncontextmenu', 'return false;');
+                            
+                            // Remove context menu dari video
+                            video.addEventListener('contextmenu', function(e) {
+                                e.preventDefault();
+                                return false;
+                            });
+                            
+                            // Block download melalui menu konteks
+                            video.addEventListener('loadedmetadata', function() {
+                                try {
+                                    // Cuba untuk block download melalui MediaSource
+                                    if (video.src && video.src.includes('blob:')) {
+                                        // Blob URLs are harder to download
+                                    }
+                                } catch (err) {}
+                            });
+                        });
+                    }
+                });
+            }
+        });
+    });
+    
+    // Start observing
+    videoObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+    
+    // Block download melalui right-click di video
+    document.addEventListener('play', function(e) {
+        if (e.target.nodeName === 'VIDEO') {
+            e.target.setAttribute('controlslist', 'nodownload');
+        }
+    }, true);
+    
+    // Sekat iframe yang mungkin digunakan untuk download
+    var iframeObserver = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeName === 'IFRAME') {
+                    try {
+                        // Block akses ke iframe
+                        node.sandbox = 'allow-scripts allow-same-origin';
+                    } catch (err) {}
+                }
+            });
+        });
+    });
+    
+    iframeObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
 })();
 </script>
+
+<!-- CSS Anti-Select & Anti-Copy -->
+<style>
+/* Lumpuhkan text selection */
+* {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none; /* Lumpuhkan callout menu */
+}
+
+/* Benarkan selection hanya pada input dan textarea */
+input, textarea {
+    -webkit-user-select: auto;
+    -moz-user-select: auto;
+    -ms-user-select: auto;
+    user-select: auto;
+}
+
+/* Lumpuhkan image dragging */
+img {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+    pointer-events: none; /* Ini akan block right-click pada gambar */
+}
+
+/* Benarkan pointer-events hanya pada channel list untuk navigation */
+.channel, .cat, .control-btn, .recent-item, #themeToggle, .audio-item, button {
+    pointer-events: auto;
+}
+
+/* Video player controls - lumpuhkan download button */
+video::-internal-media-controls-download-button {
+    display: none !important;
+}
+
+video::-webkit-media-controls-enclosure {
+    overflow: hidden !important;
+}
+
+video::-webkit-media-controls-panel {
+    width: calc(100% + 30px) !important;
+}
+</style>
+
+<style>
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+transition: background-color 0.3s, color 0.2s;
+}
+
+:root {
+--bg-primary: #0a0a0a;
+--bg-secondary: #141414;
+--bg-tertiary: #1e1e1e;
+--text-primary: #ffffff;
+--text-secondary: #b3b3b3;
+--accent: #e50914;
+--accent-hover: #f40612;
+--gold: #ffd700;
+--border: #2a2a2a;
+}
+
+.light-mode {
+--bg-primary: #f5f5f5;
+--bg-secondary: #ffffff;
+--bg-tertiary: #e8e8e8;
+--text-primary: #141414;
+--text-secondary: #4a4a4a;
+--accent: #e50914;
+--border: #d0d0d0;
+}
+
+body {
+font-family: 'Segoe UI', Arial, sans-serif;
+background: var(--bg-primary);
+color: var(--text-primary);
+overflow: hidden;
+}
+
+#layout {
+display: flex;
+height: 100vh;
+position: relative;
+}
+
+/* SIDEBAR KATEGORI */
+#categories {
+width: 200px;
+background: var(--bg-secondary);
+border-right: 1px solid var(--border);
+overflow-y: auto;
+z-index: 10;
+}
+
+#catWatermark {
+font-family: 'Orbitron', sans-serif;
+font-size: 20px;
+font-weight: 900;
+padding: 20px 0;
+text-align: center;
+color: var(--accent);
+letter-spacing: 3px;
+border-bottom: 1px solid var(--border);
+background: var(--bg-secondary);
+position: sticky;
+top: 0;
+z-index: 2;
+text-shadow: 0 0 10px rgba(229,9,20,0.5);
+}
+
+.cat {
+padding: 15px 12px;
+cursor: pointer;
+color: var(--text-secondary);
+border-bottom: 1px solid var(--border);
+display: flex;
+align-items: center;
+gap: 12px;
+font-size: 15px;
+transition: all 0.2s;
+}
+
+.cat i {
+width: 24px;
+font-size: 18px;
+color: var(--accent);
+}
+
+.cat:hover, .cat.active {
+background: var(--accent);
+color: white;
+padding-left: 20px;
+}
+
+.cat:hover i, .cat.active i {
+color: white;
+}
+
+/* PANEL CHANNEL */
+#channelPanel {
+width: 320px;
+background: var(--bg-secondary);
+border-right: 1px solid var(--border);
+display: flex;
+flex-direction: column;
+}
+
+#search {
+padding: 15px;
+border: none;
+background: var(--bg-tertiary);
+color: var(--text-primary);
+font-size: 15px;
+border-bottom: 1px solid var(--border);
+outline: none;
+}
+
+#search::placeholder {
+color: var(--text-secondary);
+}
+
+#channels {
+flex: 1;
+overflow-y: auto;
+scrollbar-width: thin;
+scrollbar-color: var(--accent) var(--border);
+}
+
+#channels::-webkit-scrollbar {
+width: 6px;
+}
+
+#channels::-webkit-scrollbar-track {
+background: var(--border);
+}
+
+#channels::-webkit-scrollbar-thumb {
+background: var(--accent);
+border-radius: 3px;
+}
+
+.channel {
+display: flex;
+align-items: center;
+gap: 12px;
+padding: 12px;
+cursor: pointer;
+border-bottom: 1px solid var(--border);
+transition: all 0.2s;
+}
+
+.channel:hover {
+background: var(--bg-tertiary);
+}
+
+.channel img {
+width: 40px;
+height: 40px;
+border-radius: 8px;
+object-fit: cover;
+background: var(--bg-tertiary);
+}
+
+.channel .name {
+flex: 1;
+font-weight: 500;
+}
+
+.fav-icon {
+color: var(--gold);
+font-size: 18px;
+opacity: 0.7;
+transition: 0.2s;
+}
+
+.fav-icon:hover {
+opacity: 1;
+transform: scale(1.2);
+}
+
+/* PLAYER AREA */
+#playerArea {
+flex: 1;
+position: relative;
+background: black;
+}
+
+#player {
+width: 100%;
+height: 100%;
+}
+
+#watermark {
+position: absolute;
+top: 20px;
+left: 50%;
+transform: translateX(-50%);
+font-family: 'Orbitron', sans-serif;
+font-size: 24px;
+color: rgba(255,215,0,0.25);
+letter-spacing: 5px;
+pointer-events: none;
+z-index: 10;
+text-transform: uppercase;
+}
+
+/* CONTROL BAR PREMIUM */
+#premiumControls {
+position: absolute;
+bottom: 220px;
+right: 20px;
+display: flex;
+flex-direction: column;
+gap: 10px;
+z-index: 50;
+}
+
+.control-btn {
+width: 50px;
+height: 50px;
+border-radius: 50%;
+background: rgba(0,0,0,0.8);
+border: 2px solid var(--accent);
+color: white;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 22px;
+cursor: pointer;
+transition: all 0.3s;
+backdrop-filter: blur(5px);
+box-shadow: 0 4px 15px rgba(229,9,20,0.3);
+}
+
+.control-btn:hover {
+background: var(--accent);
+transform: scale(1.1);
+}
+
+.control-btn.active {
+background: var(--gold);
+border-color: var(--gold);
+color: black;
+}
+
+/* RECENT CHANNELS - VERSION MINI & BAGUS */
+#recentPanel {
+position: absolute;
+top: 80px;
+left: 20px;
+background: rgba(10, 10, 10, 0.85);
+backdrop-filter: blur(10px);
+border-radius: 12px;
+border: 1px solid var(--accent);
+width: 220px;
+z-index: 40;
+box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+overflow: hidden;
+transition: all 0.3s ease;
+opacity: 0.7;
+}
+
+#recentPanel:hover {
+opacity: 1;
+box-shadow: 0 8px 25px rgba(229,9,20,0.4);
+}
+
+.recent-header {
+padding: 10px 15px;
+background: rgba(229, 9, 20, 0.2);
+cursor: pointer;
+display: flex;
+align-items: center;
+gap: 10px;
+color: var(--gold);
+font-weight: bold;
+font-size: 13px;
+border-bottom: 1px solid var(--accent);
+}
+
+.recent-header i:first-child {
+color: var(--gold);
+font-size: 14px;
+}
+
+.recent-header i:last-child {
+margin-left: auto;
+font-size: 12px;
+transition: transform 0.3s;
+}
+
+.recent-content {
+max-height: 200px;
+overflow-y: auto;
+transition: max-height 0.3s ease;
+scrollbar-width: thin;
+scrollbar-color: var(--accent) var(--border);
+}
+
+.recent-content.collapsed {
+max-height: 0;
+padding: 0;
+}
+
+.recent-content::-webkit-scrollbar {
+width: 4px;
+}
+
+.recent-content::-webkit-scrollbar-track {
+background: var(--border);
+}
+
+.recent-content::-webkit-scrollbar-thumb {
+background: var(--accent);
+border-radius: 4px;
+}
+
+#recentChannels {
+padding: 8px;
+}
+
+.recent-item {
+display: flex;
+align-items: center;
+gap: 8px;
+padding: 6px 8px;
+background: rgba(255,255,255,0.05);
+border-radius: 6px;
+cursor: pointer;
+font-size: 12px;
+margin-bottom: 4px;
+transition: all 0.2s;
+border: 1px solid transparent;
+}
+
+.recent-item:hover {
+background: var(--accent);
+border-color: var(--gold);
+transform: translateX(3px);
+}
+
+.recent-item img {
+width: 24px;
+height: 24px;
+border-radius: 4px;
+object-fit: contain; /* FIXED: contain instead of cover */
+background: #333;
+}
+
+.recent-item span {
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+max-width: 120px;
+font-size: 12px;
+}
+
+/* AUDIO TRACK MENU */
+#audioMenu {
+position: absolute;
+bottom: 280px;
+right: 80px;
+background: rgba(0,0,0,0.95);
+border-radius: 8px;
+border: 1px solid var(--accent);
+padding: 10px;
+min-width: 180px;
+display: none;
+z-index: 60;
+}
+
+#audioMenu.show {
+display: block;
+}
+
+.audio-item {
+padding: 8px 12px;
+cursor: pointer;
+border-radius: 4px;
+}
+
+.audio-item:hover {
+background: var(--accent);
+}
+
+/* EPG BAR */
+#epgBar {
+position: absolute;
+bottom: 0;
+left: 0;
+width: 100%;
+height: 200px;
+background: rgba(0,0,0,0.9);
+backdrop-filter: blur(10px);
+color: white;
+padding: 15px;
+overflow-y: auto;
+border-top: 2px solid var(--accent);
+z-index: 30;
+font-size: 14px;
+}
+
+.epgItem {
+display: block;
+padding: 6px 10px;
+margin-bottom: 3px;
+border-radius: 4px;
+background: rgba(255,255,255,0.05);
+border-left: 3px solid transparent;
+}
+
+.epgCurrent {
+background: rgba(255,215,0,0.15);
+border-left: 3px solid gold;
+color: gold;
+}
+
+/* MODE TOGGLE */
+#themeToggle {
+position: absolute;
+top: 20px;
+right: 20px;
+z-index: 100;
+background: rgba(0,0,0,0.7);
+border: 1px solid var(--accent);
+color: white;
+width: 45px;
+height: 45px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+cursor: pointer;
+font-size: 20px;
+backdrop-filter: blur(5px);
+}
+
+/* AUTO PLAY INDICATOR */
+#autoPlayIndicator {
+position: absolute;
+top: 80px;
+right: 20px;
+background: rgba(0,0,0,0.8);
+color: var(--gold);
+padding: 8px 15px;
+border-radius: 30px;
+font-size: 14px;
+border: 1px solid var(--gold);
+z-index: 45;
+display: none;
+align-items: center;
+gap: 8px;
+}
+
+#autoPlayIndicator.show {
+display: flex;
+}
+
+/* REMOTE CONTROL HINT */
+#remoteHint {
+position: absolute;
+bottom: 220px;
+left: 50%;
+transform: translateX(-50%);
+background: rgba(0,0,0,0.8);
+color: white;
+padding: 8px 16px;
+border-radius: 30px;
+font-size: 13px;
+border: 1px solid var(--accent);
+z-index: 35;
+display: flex;
+gap: 15px;
+}
+
+.key {
+background: var(--bg-tertiary);
+padding: 3px 8px;
+border-radius: 4px;
+font-weight: bold;
+color: var(--gold);
+}
+</style>
 </head>
-<body></body>
+<body>
+
+<div id="layout">
+<!-- KATEGORI -->
+<div id="categories">
+<div id="catWatermark">EJALTV</div>
+<div class="cat" onclick="showCat('movies')"><i class="fas fa-film"></i> Movies</div>
+<div class="cat" onclick="showCat('sports')"><i class="fas fa-futbol"></i> Sports</div>
+<div class="cat" onclick="showCat('malaysia')"><i class="fas fa-flag"></i> Malaysia</div>
+<div class="cat" onclick="showCat('kids')"><i class="fas fa-child"></i> Kids</div>
+<div class="cat" onclick="showCat('news')"><i class="fas fa-newspaper"></i> News</div>
+<div class="cat" onclick="showCat('chinese')"><i class="fas fa-dragon"></i> Chinese</div>
+<!-- FIXED: Indian category with proper icon -->
+<div class="cat" onclick="showCat('indian')"><i class="fas fa-pagoda"></i> Indian</div>
+<!-- NEW: Korean category added -->
+<div class="cat" onclick="showCat('korean')"><i class="fas fa-dragon"></i> Korean</div>
+<div class="cat" onclick="showFavorites()"><i class="fas fa-star"></i> Favorites</div>
+<div class="cat" onclick="showCat('entertainment')"><i class="fas fa-tv"></i> Entertainment</div>
+<div class="cat" onclick="showCat('lifestyle')"><i class="fas fa-heart"></i> Lifestyle</div>
+</div>
+
+<!-- PANEL CHANNEL -->
+<div id="channelPanel">
+<input id="search" type="text" placeholder=" Cari saluran..." onkeyup="searchChannel()">
+<div id="channels"></div>
+</div>
+
+<!-- PLAYER AREA -->
+<div id="playerArea">
+<div id="watermark">EJALTV</div>
+<div id="player"></div>
+
+<!-- Theme Toggle -->
+<div id="themeToggle" onclick="toggleTheme()">
+<i class="fas fa-moon"></i>
+</div>
+
+<!-- Premium Control Buttons -->
+<div id="premiumControls">
+<div class="control-btn" onclick="togglePIP()" title="Picture-in-Picture">
+<i class="fas fa-clone"></i>
+</div>
+<div class="control-btn" onclick="toggleAutoPlay()" id="autoPlayBtn" title="Auto Play Next">
+<i class="fas fa-play-circle"></i>
+</div>
+<div class="control-btn" onclick="showAudioMenu()" title="Tukar Audio">
+<i class="fas fa-music"></i>
+</div>
+<div class="control-btn" onclick="toggleSubtitles()" title="Sari Kata (CC)">
+<i class="fas fa-closed-captioning"></i>
+</div>
+</div>
+
+<!-- Audio Track Menu -->
+<div id="audioMenu">
+<div class="audio-item" onclick="switchAudio('malay')"> Bahasa Melayu</div>
+<div class="audio-item" onclick="switchAudio('english')"> English</div>
+<div class="audio-item" onclick="switchAudio('chinese')"> 中文</div>
+<div class="audio-item" onclick="switchAudio('tamil')"> தமிழ்</div>
+</div>
+
+<!-- Recent Channels Panel - VERSION MINI -->
+<div id="recentPanel">
+<div class="recent-header" onclick="toggleRecentPanel()">
+<i class="fas fa-history"></i>
+<span>Recent Channels</span>
+<i class="fas fa-chevron-up" id="recentToggleIcon"></i>
+</div>
+<div id="recentContent" class="recent-content">
+<div id="recentChannels"></div>
+</div>
+</div>
+
+<!-- Auto Play Indicator -->
+<div id="autoPlayIndicator">
+<i class="fas fa-sync-alt fa-spin"></i> Auto Next: <span id="nextChannelName">...</span>
+</div>
+
+<!-- Remote Control Hint -->
+<div id="remoteHint">
+<span><span class="key">↑↓</span> Pilih</span>
+<span><span class="key">←→</span> Volume</span>
+<span><span class="key">Enter</span> Main</span>
+</div>
+
+<!-- EPG Bar -->
+<div id="epgBar"> EPG: Pilih saluran untuk lihat program</div>
+</div>
+</div>
+
+<script>
+// ==================== KONFIGURASI AWAL ====================
+var player = jwplayer("player").setup({
+width: "100%",
+height: "100%",
+autostart: false,
+mute: false,
+volume: 75,
+controls: true,
+captions: {
+color: '#ffffff',
+fontSize: 16,
+backgroundOpacity: 60
+}
+});
+
+// ==================== DATA CHANNEL ====================
+var channelData = {
+movies: [
+{ name: "HBO", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/HBO_logo.svg/512px-HBO_logo.svg.png", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(HBO)/master.mpd", kid: "7ad888ee5dd6496a8c2c77a6284ff936", key: "718716c435914901d2551930a256974e", epgId: "401" },
+{ name: "Cinemax", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/479F46FE-15C6-498A-92C1-8E583B79E487/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Cinemax)/master.mpd", kid: "b83391c0f7c64142baa326b101c9f3d4", key: "1ea53c247b115d6c3bb37a4d0485a37c", epgId: "405" },
+{ name: "Fox Movies", logo: "https://via.placeholder.com/40?text=FOX", url: "https://example.com/foxmovies.m3u8", epgId: "FoxMovies" }
+],
+sports: [
+{ name: "Astro Arena", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/235_144.png", url: "https://tvmalaysia.mediatailor.ap-southeast-1.amazonaws.com/v1/dash/ceb8322ae2e84c32cb0fce196fdc60100025ab50/MT-CH22-dash/default_primary.mpd?astro=true&ads.hhid=tvmalaysia&aws.sessionId=2dd0bd23-05b0-44c6-a6dd-36f43f7ed903", kid: "efda647dad723563b625be8c05ee6110", key: "6776985938b332164b97b81fe566a34a", epgId: "AstroArena" },
+{ name: "Astro Grandstand", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/543_144.png", url: "https://4c0a6c7981954190aba1739e27e3dec8.mediatailor.ap-southeast-1.amazonaws.com/v1/dash/ceb8322ae2e84c32cb0fce196fdc60100025ab50/MT-CH28-dash/default_primary.mpd?astro=true&ads.hhid=3539bb7d77ebb396276d4ec172ec8879&aws.sessionId=ac26218e-f2d4-48c8-83c4-666f3b19efc9", kid: "5be66a6f88efee3d6e30f72a9c58e310", key: "168f3fadfc730ba3dfc932f7c430e27d", epgId: "AstroGrandstand" },
+{ name: "SPOTV", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/75E45C13-621B-44EB-86F1-35C8C3DCB7E1/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(spoTV)/master.mpd", kid: "5b593bd530f1403a8f3eb9b2cd9236c8", key: "d07c6a7f0b37a4090341e6380ff85060", epgId: "706" },
+{ name: "SPOTV 2", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/6E16A3C6-3131-4199-B8F2-467F023E14BE/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(spoTV2)/master.mpd", kid: "1af079fb8e1d43d890c1d804431ad84c", key: "3dc40bc5aaf09af8b1572646a45b1242", epgId: "707" },
+{ name: "beIN SPORTS 1", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/A0C43E09-6105-4CD5-9F44-390B57BCA1A5/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Bein1)/master.mpd", kid: "d48b6088253c443eb94d27cb7828f707", key: "e9776141f9e949273a072b0e035070ab", epgId: "708" },
+{ name: "beIN SPORTS 2", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/B6AE264E-3B1A-4E37-B9A2-43D912FC89D7/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Bein2)/master.mpd", kid: "efa6ff1acefa43048e8b7adc21d98871", key: "5d0f448b52a92035e3763c4a60275933", epgId: "709" },
+{ name: "beIN SPORTS 3", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/03E8ED19-B3A5-44F1-9176-4EC1FD68B0A1/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Bein3)/master.mpd", kid: "816ee2f7c19f49ed84276f34541b465b", key: "ca764a9973b6123a1112cffd3b32010d", epgId: "710" },
+{ name: "beIN SPORTS 4", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/C0FFC072-D51A-4676-B232-F1C06BFA87D1/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Bein4)/master.mpd", kid: "d561ff976397473e9b456b44cdffcdd2", key: "2b6cff42f7fae7e8bc32f3d5c62dc3c2", epgId: "711" },
+{ name: "Unifi Sports 1", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/28EEC6E6-98AD-44E7-8CF3-101111099742/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(unifi1)/master.mpd", kid: "90c7eb5d66b442a9a591775cc1154bc9", key: "4af842b9ad5315a01d7655b8b502196f", epgId: "701" }
+],
+malaysia: [
+{ name: "TV1", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/395_144.png", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(TV1)/master.mpd", kid: "", key: "", epgId: "101" },
+{ name: "TV2", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/396_144.png", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(TV2)/master.mpd", kid: "", key: "", epgId: "102" },
+{ name: "TV3", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/106_144.png", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(TV3)/master.mpd", kid: "ce43641a061a44fb9d95d986cfc9a68f", key: "3d63855ca5cdfcfb765f306b98bcc646", epgId: "103" },
+{ name: "Didik TV", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/4504543C-34AB-456E-940F-72431972DC9C/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Didik)/master.mpd", kid: "6f9bd00304a34972a80e5ff79aff982f", key: "95a9dfd543b897f8edebf6db32877d79", epgId: "107" },
+{ name: "8TV", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/9C66E114-6607-4EB2-9F11-DE0F25C161EE/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(8TV)/master.mpd", kid: "da1cb24f55db4ae1b32319c365920539", key: "721af66b9c3e8c4166b8b4586d1fbefd", epgId: "108" },
+{ name: "TV9", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/01A5D01A-1DAE-4E0F-8003-0B570E9F474E/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(TV9)/master.mpd", kid: "eea0828c38d74407a5c384ad730d7224", key: "250605c3d9734f7777e9c46fe5a6b176", epgId: "109" },
+{ name: "TVS", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/429_144.png", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(TVS)/master.mpd", kid: "fe6c43961ea8401e8e8bc211b1197961", key: "b9ce7dc616a3987e2b8900ce44735b07", epgId: "TVS" },
+{ name: "Inspirasi", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/571B75B0-7857-425F-BB88-9D8E12E7903B/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Inspirasi)/master.mpd", kid: "94bfaa51ce3c4acfb8a8d5a7229316b6", key: "1bc4bd67943da9eae142af71e31727af", epgId: "118" },
+{ name: "Sensasi", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/8F641B7A-CC55-497E-9C73-B1F10ADA7541/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Sensasi)/master.mpd", kid: "6ba270026f0a4b29956ace51335fb1ac", key: "edb6adbe31609226e737e515ba813169", epgId: "116" },
+{ name: "DEGUP", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/07A79742-0FA2-4DD8-8F98-929157AE96DF/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(DEGUP)/master.mpd", kid: "a1623b766e4b48eb88cea29e1c309cc7", key: "c21b36991b29928a80dc0a146beeac90", epgId: "120" },
+{ name: "Salam HD", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/1CE8DFF2-DF3E-4EFD-8D01-3D261D0890DD/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Salam)/master.mpd", kid: "32b2e71761af4641900f87df03c48cb2", key: "974839fd58393a4e16b07d7027b05868", epgId: "113" },
+{ name: "TV AlHijrah HD", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/F4935E21-02B4-4697-BEC4-671EB6034217/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(TVAL)/master.mpd", kid: "f3665ce09fcb49229602d45d1d5be4d4", key: "eb122760bbad018974689ce1372bce26", epgId: "114" },
+{ name: "SIAR", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/F101B330-8D9C-4670-9DE3-2C53E8866EA0/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(SIAR)/master.mpd", kid: "5489f58c64ad40dba471c8b1c2693e2a", key: "24acd49fa8aa6a5532dd045bab1f53e4", epgId: "121" },
+{ name: "Dunia Sinema HD", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/66BD76C5-BEFD-476A-9688-87AFCE8E8526/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(DuniaSin)/master.mpd", kid: "01a17625701e4734b02aa22c8657bd6f", key: "975a483df422455dbc29a1d83ed6f154", epgId: "128" },
+{ name: "PESONA", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/4BDA018A-6442-4561-85D4-CD8333CA2560/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Pesona)/master.mpd", kid: "d6a2211cff9545979f6f1a09851fa495", key: "804119b128f5fe51dba371d18b3c70c5", epgId: "141" }
+],
+kids: [
+{ name: "Nickelodeon", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/B0F89221-2AF9-493C-B1FD-3169136100C2/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Nickelodeon)/master.mpd", kid: "9b10e787fac84ff484c8c7d7f7668925", key: "7d7d3793e4489f6ebc50d002e4bdbd44", epgId: "554" },
+{ name: "Cartoon Network", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/19A98713-0CA9-4509-BDA3-AA652B2329A3/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(CartoonNet)/master.mpd", kid: "2da2675c6da34253b376318ef350cf19", key: "688c0015a6b4863f0663f25f42036800", epgId: "556" },
+{ name: "Cbeebies", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/9784F0AC-A9BC-4C93-8D22-023403A38B7B/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Cbeebies)/master.mpd", kid: "cc5bdbd024fe456ba6613471e4931041", key: "d48c61044cef51adb33bf6999f23e967", epgId: "553" },
+{ name: "Nickjr", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/27A246D6-BEAD-43F8-89AE-12FB781954FD/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Nickjr)/master.mpd", kid: "fe60385da93e48cda9dce2c686862462", key: "8e7c6f6beb074f153da1b00c3cf95908", epgId: "552" },
+{ name: "Moonbug", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/8E7404EF-65F4-491A-8498-7BA94D15D28A/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Moonbug)/master.mpd", kid: "c3189457b38b4ed9888c5a2e763f0ab8", key: "d4dc62e11dd1856ed4f9a26d44271d0b", epgId: "551" },
+{ name: "Dreamworks", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/C80E3DCC-64D5-4447-991B-E2E2998E6DEF/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Dreamworks)/master.mpd", kid: "e8ce35ed8bc34772abedd63383aa11b7", key: "1d2d76741e825e5c7babf597374b016e", epgId: "550" }
+],
+news: [
+{ name: "Astro Awani", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/436_144.png", url: "https://d2idp3hzkhjpih.cloudfront.net/out/v1/4b85d9c2bf97413eb0c9fd875599b837/index_3.m3u8", epgId: "AstroAwani" },
+{ name: "Bernama TV", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/F3362D9E-20F0-483D-BA25-B3305233657A/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(bernama)/master.mpd", kid: "0c588bd14a1049eea04db9eea80e6c68", key: "57a5147c8537d8c7fead448d2a9587c7", epgId: "631" },
+{ name: "Parlimen Malaysia", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/85286732-64A6-4885-B02A-ED0383F4319D/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(parlimen)/master.mpd", kid: "dce6cb3389014684b2abc82f6a478bff", key: "086c0ad70d90bbd9e39478dd0c2460b0", epgId: "633" },
+{ name: "Al Jazeera", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/5410FF16-4BD0-47F5-91B9-DAC673523D53/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(AlJazeera)/master.mpd", kid: "b5c0678dad08451e955a53ee95aff30f", key: "a05ca10851a61c2933243b7169be6679", epgId: "602" },
+{ name: "ABC Australia", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/F16A709A-F106-4164-8E34-DFD79461B61A/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(ABC)/master.mpd", kid: "a6349d2165514fa38fb6f1348679ba36", key: "1db75d2e54ff52806d84af64499685ff", epgId: "641" }
+],
+chinese: [],
+// FIXED: Indian category - sedia untuk diisi channel
+indian: [],
+// NEW: Korean category - dengan Korean channels
+korean: [
+{ name: "KBS World", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/161_144.png", url: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/kbsworld/default/index.mpd", kid: "22ff2347107e4871aa423bea9c2bd363", key: "c6e7ba2f48b3a3b8269e8bc360e60404", epgId: "KBSWorld" },
+{ name: "tvN HD", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/190_144.png", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(tVNHD)/master.mpd",kid: "925fe1266db744a3b9524a23a6cc524b", key: "d1266e747e241339a539e54f26890286", epgId: "211" },
+{ name: "tvN Movies HD", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/8D56EE30-95BC-4047-B13F-CF2E5C5F84F8/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(tVnM)/master.mpd",kid: "52480b6651c243e2b48b04ab3ecf05ec", key: "aa3513df0bc2d949ee44c52204665d50", epgId: "201" },
+{ name: "TVING", logo: "https://via.placeholder.com/40?text=TVING", url: "https://example.com/tving.m3u8", epgId: "TVING" },
+{ name: "Wavve", logo: "https://via.placeholder.com/40?text=WAVVE", url: "https://example.com/wavve.m3u8", epgId: "Wavve" }
+],
+entertainment: [
+{ name: "AXN", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/568841DF-E3B3-454A-9521-11813C6C0954/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(AXN)/master.mpd", kid: "4345340d92d64788bef7d99594cbe643", key: "c67f6e21ebbd520e31d4141b771d3867", epgId: "453" },
+{ name: "HITS Movies", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/3C8B5AB5-8F5E-41A6-9AD2-ED9E22B460E9/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(hitsM)/master.mpd", kid: "74ecb929cd504143bb68bd0e7cac6f4e", key: "b71cfa4590853ea63014e128ecdb4fbe", epgId: "407" },
+{ name: "WarnerTV", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/7C14DEDF-68C8-447B-B1D7-5CB170AF3CF3/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(WarnerTV)/master.mpd", kid: "6f4ea7be45af4275a8d76845fb19dba5", key: "b02208ea61a2cdbf5b09440bc3157f04", epgId: "451" },
+{ name: "HITS NOW", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/AB981083-F9B7-45F0-A28E-F6DCC3DAF10A/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(hitsnow)/master.mpd", kid: "4c350232d50f46dcb776ea6d12f875d2", key: "9469ab183f965894e038e2c137f0faa0", epgId: "452" },
+{ name: "HITS", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/E55E65A4-6CCD-4A8B-8132-1727470820F4/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(HITS)/master.mpd", kid: "196b011306d04ac38c2b8493b89a40d5", key: "862064c3fbd5f4d2e8a9e7b89889a06b", epgId: "454" }
+],
+lifestyle: [
+{ name: "HGTV", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/198_144.png", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(HGTV)/master.mpd", kid: "143c537a533b4e53a7137703bc92c0f2", key: "551cc5be6820a5b44d099dc7ace177f0", epgId: "HGTV" }
+]
+};
+
+// Isi dummy untuk kategori lain
+for (let i = 0; i < 3; i++) {
+channelData.news.push({ name: `News ${i+1}`, logo: "https://via.placeholder.com/40?text=NEWS", url: "https://example.com/news.m3u8", epgId: `News${i}` });
+channelData.chinese.push({ name: `Chinese ${i+1}`, logo: "https://via.placeholder.com/40?text=CHINESE", url: "https://example.com/chinese.ts", epgId: `Chi${i}` });
+channelData.indian.push({ name: `Indian ${i+1}`, logo: "https://via.placeholder.com/40?text=INDIAN", url: "https://example.com/indian.mpd", epgId: `Ind${i}` });
+channelData.entertainment.push({ name: `Hiburan ${i+1}`, logo: "https://via.placeholder.com/40?text=HIBURAN", url: "https://example.com/hiburan.m3u8", epgId: `Hib${i}` });
+}
+
+// ==================== VARIABEL GLOBAL ====================
+var favorites = JSON.parse(localStorage.getItem("ejalFav")) || [];
+var currentList = [];
+var recentChannels = JSON.parse(localStorage.getItem("recentChannels")) || [];
+var autoPlayEnabled = false;
+var autoPlayTimer = null;
+var currentChannel = null;
+var epgUrls = [
+"https://tinyurl.com/aqfadepg",
+"https://raw.githubusercontent.com/AqFad2811/epg/refs/heads/main/unifitv.xml"
+];
+
+// ==================== FUNGSI UTAMA ====================
+function renderChannels(list) {
+let html = "";
+list.forEach(c => {
+let isFav = favorites.includes(c.name);
+let favIcon = isFav ? ' ' : '☆';
+// Escape special characters in strings for onclick
+let safeUrl = c.url.replace(/'/g, "\\'");
+let safeName = c.name.replace(/'/g, "\\'");
+let safeLogo = c.logo.replace(/'/g, "\\'");
+html += `<div class="channel" onclick="playChannel('${safeUrl}','${c.kid || ''}','${c.key || ''}','${c.epgId}','${safeName}','${safeLogo}')">
+<img src="${c.logo}" onerror="this.src='https://via.placeholder.com/40?text=TV'">
+<span class="name">${c.name}</span>
+<span class="fav-icon" onclick="toggleFav('${safeName}'); event.stopPropagation();">${favIcon}</span>
+</div>`;
+});
+document.getElementById("channels").innerHTML = html || "<div style='color:#777;padding:20px;text-align:center'>Tiada saluran</div>";
+}
+
+function showCat(cat) {
+if (channelData[cat]) {
+currentList = channelData[cat];
+} else {
+currentList = [];
+}
+renderChannels(currentList);
+}
+
+function showFavorites() {
+currentList = [];
+Object.keys(channelData).forEach(cat => {
+if (Array.isArray(channelData[cat])) {
+currentList = currentList.concat(channelData[cat]);
+}
+});
+currentList = currentList.filter(c => favorites.includes(c.name));
+renderChannels(currentList);
+}
+
+function toggleFav(name) {
+if (favorites.includes(name)) {
+favorites = favorites.filter(f => f !== name);
+} else {
+favorites.push(name);
+}
+localStorage.setItem("ejalFav", JSON.stringify(favorites));
+renderChannels(currentList);
+}
+
+function searchChannel() {
+let q = document.getElementById("search").value.toLowerCase();
+renderChannels(currentList.filter(c => c.name.toLowerCase().includes(q)));
+}
+
+// ==================== FUNGSI PLAY CHANNEL ====================
+function playChannel(url, kid, key, epgId, name, logo) {
+// Simpan ke recent
+addToRecent({name, logo, url, kid, key, epgId});
+
+// Set current channel
+currentChannel = {name, logo, url, kid, key, epgId};
+
+let config = {
+file: url,
+autostart: true,
+mute: false,
+volume: 75
+};
+
+if (kid && key && kid !== "" && key !== "") {
+config.drm = { clearkey: { keyId: kid, key: key } };
+}
+
+player.setup(config);
+player.setMute(false);
+
+// Load EPG
+loadEPG(epgId);
+
+// Trigger auto play if enabled
+if (autoPlayEnabled) {
+scheduleAutoPlay();
+}
+
+// Update auto play indicator
+updateAutoPlayIndicator();
+}
+
+// ==================== RECENT CHANNELS ====================
+function addToRecent(channel) {
+// Remove if exists
+recentChannels = recentChannels.filter(c => c.name !== channel.name);
+// Add to front
+recentChannels.unshift(channel);
+// Keep only last 8 (kurang sikit)
+if (recentChannels.length > 8) recentChannels.pop();
+
+localStorage.setItem("recentChannels", JSON.stringify(recentChannels));
+renderRecent();
+}
+
+// FIXED: renderRecent function with better error handling for images
+function renderRecent() {
+let html = "";
+recentChannels.slice(0, 6).forEach(c => {
+let safeUrl = c.url.replace(/'/g, "\\'");
+let safeName = c.name.replace(/'/g, "\\'");
+let safeLogo = c.logo.replace(/'/g, "\\'");
+html += `<div class="recent-item" onclick="playChannel('${safeUrl}','${c.kid || ''}','${c.key || ''}','${c.epgId}','${safeName}','${safeLogo}')">
+<img src="${c.logo}" onerror="this.src='https://via.placeholder.com/24?text=' + encodeURIComponent('${c.name}'); this.onerror=null;" style="object-fit: contain; background: #333;">
+<span>${c.name}</span>
+</div>`;
+});
+document.getElementById("recentChannels").innerHTML = html || "<div style='color:#777;padding:8px;text-align:center'>Tiada recent</div>";
+}
+
+// ==================== TOGGLE RECENT PANEL ====================
+function toggleRecentPanel() {
+let content = document.getElementById("recentContent");
+let icon = document.getElementById("recentToggleIcon");
+
+content.classList.toggle("collapsed");
+
+if (content.classList.contains("collapsed")) {
+icon.className = "fas fa-chevron-down";
+} else {
+icon.className = "fas fa-chevron-up";
+}
+}
+
+// Auto fade recent panel
+let recentTimer;
+function resetRecentFade() {
+let panel = document.getElementById("recentPanel");
+panel.style.opacity = "1";
+
+if (recentTimer) clearTimeout(recentTimer);
+recentTimer = setTimeout(() => {
+if (!panel.matches(':hover')) {
+panel.style.opacity = "0.5";
+}
+}, 3000);
+}
+
+// Event listeners untuk recent panel fade
+document.getElementById("recentPanel").addEventListener("mouseenter", function() {
+this.style.opacity = "1";
+if (recentTimer) clearTimeout(recentTimer);
+});
+
+document.getElementById("recentPanel").addEventListener("mouseleave", function() {
+resetRecentFade();
+});
+
+// ==================== AUTO PLAY NEXT ====================
+function toggleAutoPlay() {
+autoPlayEnabled = !autoPlayEnabled;
+let btn = document.getElementById("autoPlayBtn");
+if (autoPlayEnabled) {
+btn.classList.add("active");
+btn.style.background = "var(--gold)";
+scheduleAutoPlay();
+} else {
+btn.classList.remove("active");
+btn.style.background = "";
+if (autoPlayTimer) {
+clearTimeout(autoPlayTimer);
+autoPlayTimer = null;
+}
+document.getElementById("autoPlayIndicator").classList.remove("show");
+}
+}
+
+function scheduleAutoPlay() {
+if (autoPlayTimer) clearTimeout(autoPlayTimer);
+
+// Auto play selepas 30 saat (simulasi)
+autoPlayTimer = setTimeout(() => {
+playNextRandomChannel();
+}, 30000); // 30 saat
+
+// Update indicator
+updateAutoPlayIndicator();
+}
+
+function playNextRandomChannel() {
+// Pilih random channel dari currentList
+if (currentList.length > 0) {
+let randomIndex = Math.floor(Math.random() * currentList.length);
+let nextChannel = currentList[randomIndex];
+playChannel(
+nextChannel.url,
+nextChannel.kid || '',
+nextChannel.key || '',
+nextChannel.epgId,
+nextChannel.name,
+nextChannel.logo
+);
+}
+}
+
+function updateAutoPlayIndicator() {
+let indicator = document.getElementById("autoPlayIndicator");
+if (autoPlayEnabled && currentList.length > 0) {
+let nextName = "Saluran rawak";
+indicator.classList.add("show");
+document.getElementById("nextChannelName").innerText = nextName;
+} else {
+indicator.classList.remove("show");
+}
+}
+
+// ==================== PICTURE-IN-PICTURE ====================
+function togglePIP() {
+if (document.pictureInPictureEnabled) {
+let video = document.querySelector('video');
+if (video) {
+if (document.pictureInPictureElement) {
+document.exitPictureInPicture();
+} else {
+video.requestPictureInPicture();
+}
+} else {
+alert("Tiada video untuk PIP mode");
+}
+} else {
+alert("Browser tak support PIP");
+}
+}
+
+// ==================== AUDIO TRACK ====================
+function showAudioMenu() {
+let menu = document.getElementById("audioMenu");
+menu.classList.toggle("show");
+}
+
+function switchAudio(lang) {
+let audioTracks = player.getAudioTracks();
+if (audioTracks && audioTracks.length > 0) {
+for (let i = 0; i < audioTracks.length; i++) {
+if (audioTracks[i].language && audioTracks[i].language.includes(lang)) {
+player.setCurrentAudioTrack(i);
+break;
+}
+}
+}
+document.getElementById("audioMenu").classList.remove("show");
+
+// Notifikasi
+alert(`Audio ditukar ke ${lang}`);
+}
+
+// ==================== SUBTITLE (CC) ====================
+function toggleSubtitles() {
+let tracks = player.getCaptionsList();
+if (tracks && tracks.length > 0) {
+// Toggle between first track and off
+let currentTrack = player.getCurrentCaptions();
+if (currentTrack) {
+player.setCurrentCaptions(null); // Off
+} else {
+player.setCurrentCaptions(tracks[0].track);
+}
+} else {
+alert("Tiada track subtitle untuk saluran ini");
+}
+}
+
+// ==================== THEME TOGGLE ====================
+function toggleTheme() {
+document.body.classList.toggle("light-mode");
+let icon = document.querySelector("#themeToggle i");
+if (document.body.classList.contains("light-mode")) {
+icon.className = "fas fa-sun";
+} else {
+icon.className = "fas fa-moon";
+}
+}
+
+// ==================== EPG LOADER ====================
+async function loadEPG(epgId) {
+let epgBar = document.getElementById("epgBar");
+epgBar.innerHTML = " Memuat EPG...";
+try {
+let html = "";
+let now = new Date();
+for (let url of epgUrls) {
+let res = await fetch(url);
+let text = await res.text();
+let parser = new DOMParser();
+let xmlDoc = parser.parseFromString(text, "application/xml");
+let programmes = xmlDoc.querySelectorAll(`programme[channel='${epgId}']`);
+
+programmes.forEach(p => {
+let startStr = p.getAttribute('start').substr(0, 12);
+let endStr = p.getAttribute('stop').substr(0, 12);
+let start = new Date(`${startStr.slice(0,4)}-${startStr.slice(4,6)}-${startStr.slice(6,8)}T${startStr.slice(8,10)}:${startStr.slice(10,12)}`);
+let end = new Date(`${endStr.slice(0,4)}-${endStr.slice(4,6)}-${endStr.slice(6,8)}T${endStr.slice(8,10)}:${endStr.slice(10,12)}`);
+let title = p.querySelector('title')?.textContent || 'Tiada Tajuk';
+let timeStr = `${start.getHours().toString().padStart(2,'0')}:${start.getMinutes().toString().padStart(2,'0')} - ${end.getHours().toString().padStart(2,'0')}:${end.getMinutes().toString().padStart(2,'0')}`;
+let cls = (now >= start && now < end) ? 'epgItem epgCurrent' : 'epgItem';
+html += `<span class="${cls}">${timeStr} ${title}</span>`;
+});
+}
+epgBar.innerHTML = html || " Tiada data EPG untuk saluran ini";
+let current = epgBar.querySelector(".epgCurrent");
+if (current) {
+epgBar.scrollTop = current.offsetTop - epgBar.offsetHeight/2 + current.offsetHeight/2;
+}
+} catch (e) {
+epgBar.innerHTML = " Ralat EPG";
+console.error(e);
+}
+}
+
+// ==================== REMOTE CONTROL (KEYBOARD) ====================
+document.addEventListener('keydown', function(e) {
+// Arrow Up/Down: Navigate channels
+if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+e.preventDefault();
+let channels = document.querySelectorAll('.channel');
+let currentFocus = document.activeElement;
+
+if (channels.length > 0) {
+if (e.key === 'ArrowDown') {
+if (document.activeElement === document.body) {
+channels[0].focus();
+} else {
+let next = Array.from(channels).indexOf(currentFocus) + 1;
+if (next < channels.length) channels[next].focus();
+}
+} else {
+if (document.activeElement === document.body) {
+channels[channels.length-1].focus();
+} else {
+let prev = Array.from(channels).indexOf(currentFocus) - 1;
+if (prev >= 0) channels[prev].focus();
+}
+}
+}
+}
+
+// Arrow Left/Right: Volume
+if (e.key === 'ArrowLeft') {
+let vol = player.getVolume();
+player.setVolume(Math.max(0, vol - 5));
+}
+if (e.key === 'ArrowRight') {
+let vol = player.getVolume();
+player.setVolume(Math.min(100, vol + 5));
+}
+
+// Enter: Play selected channel
+if (e.key === 'Enter' && document.activeElement && document.activeElement.classList.contains('channel')) {
+document.activeElement.click();
+}
+
+// Space: Play/Pause
+if (e.key === ' ') {
+e.preventDefault();
+if (player.getState() === 'playing') {
+player.pause();
+} else {
+player.play();
+}
+}
+
+// C key: Toggle CC
+if (e.key === 'c' || e.key === 'C') {
+toggleSubtitles();
+}
+
+// A key: Toggle AutoPlay
+if (e.key === 'a' || e.key === 'A') {
+toggleAutoPlay();
+}
+
+// P key: PIP
+if (e.key === 'p' || e.key === 'P') {
+togglePIP();
+}
+});
+
+// ==================== INIT ====================
+showCat('malaysia');
+renderRecent();
+resetRecentFade();
+
+// Pastikan tak mute
+if (player) {
+player.on('ready', function() {
+player.setMute(false);
+player.setVolume(75);
+});
+}
+
+// Close audio menu bila klik kat lain
+document.addEventListener('click', function(e) {
+if (!e.target.closest('#audioMenu') && !e.target.closest('[onclick="showAudioMenu()"]')) {
+document.getElementById('audioMenu').classList.remove('show');
+}
+});
+
+// Reset fade bila gerak mouse
+document.addEventListener('mousemove', function() {
+resetRecentFade();
+});
+
+// Debug - check if channels are loaded
+console.log("EJALTV Pro Ultimate - Ready!");
+</script>
+
+<!-- Additional security: disable printing and screenshots protection -->
+<script>
+// Block print screen (partial protection)
+document.addEventListener('keyup', function(e) {
+    if (e.key === 'PrintScreen') {
+        alert('📸 Screenshot tidak dibenarkan');
+        // Clear clipboard
+        try {
+            navigator.clipboard.writeText('');
+        } catch(err) {}
+    }
+});
+
+// Block copy commands
+document.addEventListener('copy', function(e) {
+    e.clipboardData.setData('text/plain', '');
+    e.preventDefault();
+});
+
+// Block cut commands
+document.addEventListener('cut', function(e) {
+    e.preventDefault();
+});
+
+// Additional DevTools detection
+(function() {
+    var devtools = { open: false };
+    var threshold = 160;
+    
+    setInterval(function() {
+        var widthThreshold = window.outerWidth - window.innerWidth > threshold;
+        var heightThreshold = window.outerHeight - window.innerHeight > threshold;
+        
+        if (widthThreshold || heightThreshold) {
+            // Show warning but don't break the page
+            console.clear();
+            console.log('%c⚠️ DevTools Dikesan! Sila tutup.', 'font-size:20px; color:red;');
+        }
+    }, 500);
+})();
+
+// Block right-click on video player specifically
+setTimeout(function() {
+    var videos = document.querySelectorAll('video');
+    videos.forEach(function(video) {
+        video.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        video.setAttribute('controlslist', 'nodownload');
+    });
+}, 2000);
+</script>
+
+</body>
 </html>
