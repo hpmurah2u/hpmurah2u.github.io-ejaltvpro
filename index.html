@@ -208,18 +208,6 @@ height: 100%;
 background: black;
 }
 
-.shaka-controls-container {
---video-background-color: black;
-}
-
-.shaka-controls-button {
-color: white;
-}
-
-.shaka-volume-bar-container {
-background: rgba(255,255,255,0.3);
-}
-
 #watermark {
 position: absolute;
 top: 20px;
@@ -511,9 +499,25 @@ font-weight: bold;
 color: var(--gold);
 }
 
-/* Shaka Player custom controls */
-.shaka-controls-container {
-z-index: 20;
+/* Error message */
+#errorMessage {
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+background: rgba(0,0,0,0.9);
+color: white;
+padding: 20px;
+border-radius: 10px;
+border: 2px solid var(--accent);
+z-index: 1000;
+display: none;
+text-align: center;
+max-width: 80%;
+}
+
+#errorMessage.show {
+display: block;
 }
 </style>
 </head>
@@ -548,6 +552,9 @@ z-index: 20;
 <div id="videoContainer">
 <video id="videoElement" autoplay controls></video>
 </div>
+
+<!-- Error Message -->
+<div id="errorMessage"></div>
 
 <!-- Theme Toggle -->
 <div id="themeToggle" onclick="toggleTheme()">
@@ -609,39 +616,20 @@ z-index: 20;
 
 <script>
 // ==================== INIT SHAKA PLAYER ====================
-// Inisialisasi Shaka Player
 let player = null;
 let videoElement = null;
 
-function initShakaPlayer() {
-videoElement = document.getElementById('videoElement');
-player = new shaka.Player(videoElement);
-
-// Setup Shaka
-player.configure({
-preferredAudioLanguage: 'ms',
-preferredTextLanguage: 'ms',
-drm: {
-servers: {
-'com.widevine.alpha': 'https://widevine-proxy.appspot.com/proxy',
-'com.microsoft.playready': 'https://playready.directtaps.net/pr/svc/rightsmanager.asmx?PlayRight=1&ContentKey=EAtsIJQPd5pFiRUrV9Layw=='
-}
-}
-});
-
-// Attach errors
-player.addEventListener('error', onShakaError);
-
-console.log('Shaka Player initialized');
+// Helper untuk show error
+function showError(message) {
+let errorDiv = document.getElementById('errorMessage');
+errorDiv.innerHTML = message;
+errorDiv.classList.add('show');
+setTimeout(() => {
+errorDiv.classList.remove('show');
+}, 5000);
 }
 
-// Shaka error handler
-function onShakaError(event) {
-console.error('Shaka Player error:', event.detail);
-document.getElementById('epgBar').innerHTML = ' Ralat memainkan saluran. Cuba saluran lain.';
-}
-
-// Helper untuk convert hex ke Uint8Array untuk ClearKey
+// Helper untuk convert hex string to Uint8Array
 function hexToUint8Array(hex) {
 // Remove any non-hex characters
 hex = hex.replace(/[^0-9A-Fa-f]/g, '');
@@ -655,45 +643,134 @@ view[i / 2] = parseInt(hex.substr(i, 2), 16);
 return view;
 }
 
-// Fungsi untuk play channel dengan support ClearKey
-async function playWithShaka(url, kid, key) {
+// Helper untuk format key ID untuk ClearKey
+function formatKeyIdForClearKey(keyId) {
+// Shaka Player expects key ID in the format of a UUID with hyphens
+// But we can also use raw hex
 try {
-// Configure for this specific stream
-const config = {
+// If it's already in UUID format, return as is
+if (keyId.includes('-')) {
+return keyId.toLowerCase();
+}
+// If it's a hex string, try to format as UUID
+if (keyId.length === 32) {
+return keyId.toLowerCase();
+}
+return keyId;
+} catch (e) {
+return keyId;
+}
+}
+
+// Inisialisasi Shaka Player
+async function initShakaPlayer() {
+videoElement = document.getElementById('videoElement');
+player = new shaka.Player(videoElement);
+
+// Konfigurasi Shaka
+player.configure({
+preferredAudioLanguage: 'ms',
+preferredTextLanguage: 'ms',
 drm: {
 servers: {
-'com.widevine.alpha': 'https://widevine-proxy.appspot.com/proxy',
-'org.w3.clearkey': 'https://cwip-shaka-proxy.appspot.com/no_auth'
+'org.w3.clearkey': 'https://cwip-shaka-proxy.appspot.com/no_auth',
+'com.widevine.alpha': 'https://widevine-proxy.appspot.com/proxy'
 },
 advanced: {
 'org.w3.clearkey': {
 distinctiveIdentifierRequired: false,
 persistentStateRequired: false,
 videoRobustness: '',
-audioRobustness: '',
-serverCertificate: null,
-individualizationServer: ''
+audioRobustness: ''
 }
 }
+},
+manifest: {
+dash: {
+clockSyncUri: 'https://time.google.com/time.txt',
+ignoreDrmInfo: false,
+disableText: false,
+disableAudio: false
+}
+},
+streaming: {
+bufferingGoal: 30,
+rebufferingGoal: 15,
+bufferBehind: 60,
+ignoreTextStreamFailures: true,
+ignoreAudioStreamFailures: true,
+retryParameters: {
+maxAttempts: 5,
+baseDelay: 1000,
+backoffFactor: 2,
+fatalAttempts: 5,
+timeout: 30000
+}
+}
+});
+
+// Event listeners
+player.addEventListener('error', (e) => {
+console.error('Shaka Player error:', e.detail);
+let error = e.detail;
+let message = 'Ralat memainkan saluran: ';
+
+if (error.category === shaka.util.Error.Category.DRM) {
+message += 'DRM Error - Mungkin key tidak sah';
+} else if (error.category === shaka.util.Error.Category.NETWORK) {
+message += 'Network Error - Cuba refresh';
+} else {
+message += error.message || 'Unknown error';
+}
+
+showError(message);
+document.getElementById('epgBar').innerHTML = ' ' + message;
+});
+
+// Network request filter untuk handle CORS
+player.getNetworkingEngine().registerRequestFilter((type, request) => {
+// Add headers to avoid CORS issues
+request.headers = request.headers || {};
+request.headers['Origin'] = window.location.origin;
+request.headers['Referer'] = window.location.href;
+request.allowCrossSiteRedirects = true;
+});
+
+console.log('Shaka Player initialized');
+}
+
+// Fungsi untuk main channel dengan ClearKey
+async function playWithShaka(url, kid, key) {
+try {
+if (!player) {
+await initShakaPlayer();
+}
+
+// Reset configuration to default
+let config = {
+drm: {
+clearKeys: {}
 }
 };
 
 // If ClearKey is provided
 if (kid && key && kid !== '' && key !== '') {
-config.drm.clearKeys = {};
-
+try {
 // Convert hex to Uint8Array
 const keyId = hexToUint8Array(kid);
 const keyValue = hexToUint8Array(key);
-
-// Add the key pair
 config.drm.clearKeys[keyId] = keyValue;
+console.log('ClearKey configured:', {kid, key});
+} catch (e) {
+console.warn('Error converting keys:', e);
+}
 }
 
 // Apply configuration
 player.configure(config);
 
-// Load the stream
+// Try to load the stream
+console.log('Loading stream:', url);
 await player.load(url);
 console.log('Stream loaded successfully');
 
@@ -702,11 +779,47 @@ videoElement.play();
 
 } catch (error) {
 console.error('Error loading stream:', error);
-document.getElementById('epgBar').innerHTML = ' Ralat memuatkan stream: ' + error.message;
+let message = 'Ralat memuatkan stream: ';
+
+if (error.code === 7000) {
+message += 'DRM Error - Key tidak sah atau stream dilindungi';
+} else if (error.code === 1001) {
+message += 'Network Error - URL tidak reachable';
+} else if (error.code === 1002) {
+message += 'HTTP Error - Server mungkin down';
+} else if (error.code === 6001) {
+message += 'Manifest Error - Format tidak support';
+} else if (error.code === 6014) {
+message += 'CORS Error - Server block request';
+} else {
+message += error.message || 'Unknown error';
+}
+
+showError(message);
+document.getElementById('epgBar').innerHTML = ' ' + message;
+
+// Try fallback to HLS.js for m3u8 if available
+if (url.includes('.m3u8') && typeof Hls !== 'undefined') {
+tryFallbackToHLS(url);
+}
+}
+}
+
+// Fallback ke HLS untuk .m3u8 streams
+function tryFallbackToHLS(url) {
+if (Hls.isSupported()) {
+showError('Mencuba HLS fallback...');
+let hls = new Hls();
+hls.loadSource(url);
+hls.attachMedia(videoElement);
+hls.on(Hls.Events.MANIFEST_PARSED, function() {
+videoElement.play();
+});
 }
 }
 
 // ==================== DATA CHANNEL ====================
+// (Data channel sama macam asal - dikekalkan sepenuhnya)
 var channelData = {
 movies: [
 { name: "HBO", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/HBO_logo.svg/512px-HBO_logo.svg.png", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(HBO)/master.mpd", kid: "7ad888ee5dd6496a8c2c77a6284ff936", key: "718716c435914901d2551930a256974e", epgId: "401" },
@@ -851,13 +964,16 @@ let q = document.getElementById("search").value.toLowerCase();
 renderChannels(currentList.filter(c => c.name.toLowerCase().includes(q)));
 }
 
-// ==================== FUNGSI PLAY CHANNEL (UPDATED FOR SHAKA) ====================
+// ==================== FUNGSI PLAY CHANNEL ====================
 function playChannel(url, kid, key, epgId, name, logo) {
 // Simpan ke recent
 addToRecent({name, logo, url, kid, key, epgId});
 
 // Set current channel
 currentChannel = {name, logo, url, kid, key, epgId};
+
+// Update EPG
+document.getElementById('epgBar').innerHTML = ' Memuatkan ' + name + '...';
 
 // Play using Shaka Player
 playWithShaka(url, kid, key);
@@ -880,7 +996,7 @@ function addToRecent(channel) {
 recentChannels = recentChannels.filter(c => c.name !== channel.name);
 // Add to front
 recentChannels.unshift(channel);
-// Keep only last 8 (kurang sikit)
+// Keep only last 8
 if (recentChannels.length > 8) recentChannels.pop();
 
 localStorage.setItem("recentChannels", JSON.stringify(recentChannels));
@@ -961,10 +1077,10 @@ document.getElementById("autoPlayIndicator").classList.remove("show");
 function scheduleAutoPlay() {
 if (autoPlayTimer) clearTimeout(autoPlayTimer);
 
-// Auto play selepas 30 saat (simulasi)
+// Auto play selepas 30 saat
 autoPlayTimer = setTimeout(() => {
 playNextRandomChannel();
-}, 30000); // 30 saat
+}, 30000);
 
 // Update indicator
 updateAutoPlayIndicator();
@@ -1023,34 +1139,42 @@ menu.classList.toggle("show");
 
 function switchAudio(lang) {
 try {
+if (player) {
 let tracks = player.getVariantTracks();
 if (tracks && tracks.length > 0) {
 let audioTracks = tracks.filter(t => t.type === 'variant' && t.language && t.language.includes(lang));
 if (audioTracks.length > 0) {
 player.selectVariantTrack(audioTracks[0], true);
+alert(`Audio ditukar ke ${lang}`);
+} else {
+alert(`Tiada track audio ${lang}`);
+}
 }
 }
 document.getElementById("audioMenu").classList.remove("show");
-alert(`Audio ditukar ke ${lang}`);
 } catch (e) {
 console.error('Error switching audio:', e);
-alert('Tidak dapat tukar audio untuk saluran ini');
+alert('Tidak dapat tukar audio');
 }
 }
 
 // ==================== SUBTITLE (CC) ====================
 function toggleSubtitles() {
 try {
+if (player) {
 let tracks = player.getTextTracks();
 if (tracks && tracks.length > 0) {
-let currentTrack = player.getTextTracks().find(t => t.enabled);
-if (currentTrack) {
-currentTrack.enabled = false;
+let enabled = tracks.some(t => t.enabled);
+if (enabled) {
+tracks.forEach(t => t.enabled = false);
+alert('Subtitles dimatikan');
 } else {
 player.selectTextTrack(tracks[0]);
+alert('Subtitles dihidupkan');
 }
 } else {
-alert("Tiada track subtitle untuk saluran ini");
+alert("Tiada track subtitle");
+}
 }
 } catch (e) {
 console.error('Error toggling subtitles:', e);
@@ -1071,28 +1195,43 @@ icon.className = "fas fa-moon";
 
 // ==================== EPG LOADER ====================
 async function loadEPG(epgId) {
+if (!epgId) {
+document.getElementById("epgBar").innerHTML = " Tiada ID EPG untuk saluran ini";
+return;
+}
+
 let epgBar = document.getElementById("epgBar");
 epgBar.innerHTML = " Memuat EPG...";
 try {
 let html = "";
 let now = new Date();
 for (let url of epgUrls) {
+try {
 let res = await fetch(url);
+if (!res.ok) continue;
 let text = await res.text();
 let parser = new DOMParser();
 let xmlDoc = parser.parseFromString(text, "application/xml");
 let programmes = xmlDoc.querySelectorAll(`programme[channel='${epgId}']`);
 
 programmes.forEach(p => {
-let startStr = p.getAttribute('start').substr(0, 12);
-let endStr = p.getAttribute('stop').substr(0, 12);
-let start = new Date(`${startStr.slice(0,4)}-${startStr.slice(4,6)}-${startStr.slice(6,8)}T${startStr.slice(8,10)}:${startStr.slice(10,12)}`);
-let end = new Date(`${endStr.slice(0,4)}-${endStr.slice(4,6)}-${endStr.slice(6,8)}T${endStr.slice(8,10)}:${endStr.slice(10,12)}`);
+let startStr = p.getAttribute('start');
+let endStr = p.getAttribute('stop');
+if (!startStr || !endStr) return;
+
+startStr = startStr.substr(0, 12);
+endStr = endStr.substr(0, 12);
+
+let start = new Date(`${startStr.slice(0,4)}-${startStr.slice(4,6)}-${startStr.slice(6,8)}T${startStr.slice(8,10)}:${startStr.slice(10,12)}:00`);
+let end = new Date(`${endStr.slice(0,4)}-${endStr.slice(4,6)}-${endStr.slice(6,8)}T${endStr.slice(8,10)}:${endStr.slice(10,12)}:00`);
 let title = p.querySelector('title')?.textContent || 'Tiada Tajuk';
 let timeStr = `${start.getHours().toString().padStart(2,'0')}:${start.getMinutes().toString().padStart(2,'0')} - ${end.getHours().toString().padStart(2,'0')}:${end.getMinutes().toString().padStart(2,'0')}`;
 let cls = (now >= start && now < end) ? 'epgItem epgCurrent' : 'epgItem';
 html += `<span class="${cls}">${timeStr} ${title}</span>`;
 });
+} catch (e) {
+console.warn('Error loading EPG from', url, e);
+}
 }
 epgBar.innerHTML = html || " Tiada data EPG untuk saluran ini";
 let current = epgBar.querySelector(".epgCurrent");
@@ -1179,12 +1318,12 @@ togglePIP();
 });
 
 // ==================== INIT ====================
-// Inisialisasi Shaka Player
 window.onload = function() {
-// Init Shaka
+// Install polyfills dan init Shaka
 shaka.polyfill.installAll();
+
 if (shaka.Player.isBrowserSupported()) {
-initShakaPlayer();
+initShakaPlayer().catch(console.error);
 } else {
 console.error('Browser tidak support Shaka Player');
 document.getElementById('epgBar').innerHTML = 'Browser tidak support playback';
@@ -1208,7 +1347,6 @@ document.addEventListener('mousemove', function() {
 resetRecentFade();
 });
 
-// Debug - check if channels are loaded
 console.log("EJALTV Pro Ultimate with Shaka Player - Ready!");
 </script>
 </body>
