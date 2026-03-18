@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EJALTV Pro ULTIMATE - Premium Malaysia</title>
-<!-- JW Player -->
-<script src="https://cdn.jwplayer.com/libraries/IDzF9Zmk.js"></script>
+<!-- Shaka Player -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/controls.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.compiled.min.js"></script>
 <!-- Font Awesome 6 -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <!-- Google Fonts -->
@@ -195,9 +196,28 @@ position: relative;
 background: black;
 }
 
-#player {
+#videoContainer {
 width: 100%;
 height: 100%;
+position: relative;
+}
+
+#videoElement {
+width: 100%;
+height: 100%;
+background: black;
+}
+
+.shaka-controls-container {
+--video-background-color: black;
+}
+
+.shaka-controls-button {
+color: white;
+}
+
+.shaka-volume-bar-container {
+background: rgba(255,255,255,0.3);
 }
 
 #watermark {
@@ -353,7 +373,7 @@ transform: translateX(3px);
 width: 24px;
 height: 24px;
 border-radius: 4px;
-object-fit: contain; /* FIXED: contain instead of cover */
+object-fit: contain;
 background: #333;
 }
 
@@ -490,6 +510,11 @@ border-radius: 4px;
 font-weight: bold;
 color: var(--gold);
 }
+
+/* Shaka Player custom controls */
+.shaka-controls-container {
+z-index: 20;
+}
 </style>
 </head>
 <body>
@@ -504,9 +529,7 @@ color: var(--gold);
 <div class="cat" onclick="showCat('kids')"><i class="fas fa-child"></i> Kids</div>
 <div class="cat" onclick="showCat('news')"><i class="fas fa-newspaper"></i> News</div>
 <div class="cat" onclick="showCat('chinese')"><i class="fas fa-dragon"></i> Chinese</div>
-<!-- FIXED: Indian category with proper icon -->
 <div class="cat" onclick="showCat('indian')"><i class="fas fa-pagoda"></i> Indian</div>
-<!-- NEW: Korean category added -->
 <div class="cat" onclick="showCat('korean')"><i class="fas fa-dragon"></i> Korean</div>
 <div class="cat" onclick="showFavorites()"><i class="fas fa-star"></i> Favorites</div>
 <div class="cat" onclick="showCat('entertainment')"><i class="fas fa-tv"></i> Entertainment</div>
@@ -522,7 +545,9 @@ color: var(--gold);
 <!-- PLAYER AREA -->
 <div id="playerArea">
 <div id="watermark">EJALTV</div>
-<div id="player"></div>
+<div id="videoContainer">
+<video id="videoElement" autoplay controls></video>
+</div>
 
 <!-- Theme Toggle -->
 <div id="themeToggle" onclick="toggleTheme()">
@@ -583,27 +608,110 @@ color: var(--gold);
 </div>
 
 <script>
-// ==================== KONFIGURASI AWAL ====================
-var player = jwplayer("player").setup({
-width: "100%",
-height: "100%",
-autostart: false,
-mute: false,
-volume: 75,
-controls: true,
-captions: {
-color: '#ffffff',
-fontSize: 16,
-backgroundOpacity: 60
+// ==================== INIT SHAKA PLAYER ====================
+// Inisialisasi Shaka Player
+let player = null;
+let videoElement = null;
+
+function initShakaPlayer() {
+videoElement = document.getElementById('videoElement');
+player = new shaka.Player(videoElement);
+
+// Setup Shaka
+player.configure({
+preferredAudioLanguage: 'ms',
+preferredTextLanguage: 'ms',
+drm: {
+servers: {
+'com.widevine.alpha': 'https://widevine-proxy.appspot.com/proxy',
+'com.microsoft.playready': 'https://playready.directtaps.net/pr/svc/rightsmanager.asmx?PlayRight=1&ContentKey=EAtsIJQPd5pFiRUrV9Layw=='
+}
 }
 });
+
+// Attach errors
+player.addEventListener('error', onShakaError);
+
+console.log('Shaka Player initialized');
+}
+
+// Shaka error handler
+function onShakaError(event) {
+console.error('Shaka Player error:', event.detail);
+document.getElementById('epgBar').innerHTML = ' Ralat memainkan saluran. Cuba saluran lain.';
+}
+
+// Helper untuk convert hex ke Uint8Array untuk ClearKey
+function hexToUint8Array(hex) {
+// Remove any non-hex characters
+hex = hex.replace(/[^0-9A-Fa-f]/g, '');
+if (hex.length % 2 !== 0) {
+hex = '0' + hex;
+}
+const view = new Uint8Array(hex.length / 2);
+for (let i = 0; i < hex.length; i += 2) {
+view[i / 2] = parseInt(hex.substr(i, 2), 16);
+}
+return view;
+}
+
+// Fungsi untuk play channel dengan support ClearKey
+async function playWithShaka(url, kid, key) {
+try {
+// Configure for this specific stream
+const config = {
+drm: {
+servers: {
+'com.widevine.alpha': 'https://widevine-proxy.appspot.com/proxy',
+'org.w3.clearkey': 'https://cwip-shaka-proxy.appspot.com/no_auth'
+},
+advanced: {
+'org.w3.clearkey': {
+distinctiveIdentifierRequired: false,
+persistentStateRequired: false,
+videoRobustness: '',
+audioRobustness: '',
+serverCertificate: null,
+individualizationServer: ''
+}
+}
+}
+};
+
+// If ClearKey is provided
+if (kid && key && kid !== '' && key !== '') {
+config.drm.clearKeys = {};
+
+// Convert hex to Uint8Array
+const keyId = hexToUint8Array(kid);
+const keyValue = hexToUint8Array(key);
+
+// Add the key pair
+config.drm.clearKeys[keyId] = keyValue;
+}
+
+// Apply configuration
+player.configure(config);
+
+// Load the stream
+await player.load(url);
+console.log('Stream loaded successfully');
+
+// Autoplay
+videoElement.play();
+
+} catch (error) {
+console.error('Error loading stream:', error);
+document.getElementById('epgBar').innerHTML = ' Ralat memuatkan stream: ' + error.message;
+}
+}
 
 // ==================== DATA CHANNEL ====================
 var channelData = {
 movies: [
 { name: "HBO", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/HBO_logo.svg/512px-HBO_logo.svg.png", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(HBO)/master.mpd", kid: "7ad888ee5dd6496a8c2c77a6284ff936", key: "718716c435914901d2551930a256974e", epgId: "401" },
 { name: "Cinemax", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/479F46FE-15C6-498A-92C1-8E583B79E487/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Cinemax)/master.mpd", kid: "b83391c0f7c64142baa326b101c9f3d4", key: "1ea53c247b115d6c3bb37a4d0485a37c", epgId: "405" },
-{ name: "Fox Movies", logo: "https://via.placeholder.com/40?text=FOX", url: "https://example.com/foxmovies.m3u8", epgId: "FoxMovies" }
+{ name: "Fox Movies", logo: "https://via.placeholder.com/40?text=FOX", url: "https://example.com/foxmovies.m3u8", kid: "", key: "", epgId: "FoxMovies" }
 ],
 sports: [
 { name: "Astro Arena", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/235_144.png", url: "https://tvmalaysia.mediatailor.ap-southeast-1.amazonaws.com/v1/dash/ceb8322ae2e84c32cb0fce196fdc60100025ab50/MT-CH22-dash/default_primary.mpd?astro=true&ads.hhid=tvmalaysia&aws.sessionId=2dd0bd23-05b0-44c6-a6dd-36f43f7ed903", kid: "efda647dad723563b625be8c05ee6110", key: "6776985938b332164b97b81fe566a34a", epgId: "AstroArena" },
@@ -642,22 +750,20 @@ kids: [
 { name: "Dreamworks", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/C80E3DCC-64D5-4447-991B-E2E2998E6DEF/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(Dreamworks)/master.mpd", kid: "e8ce35ed8bc34772abedd63383aa11b7", key: "1d2d76741e825e5c7babf597374b016e", epgId: "550" }
 ],
 news: [
-{ name: "Astro Awani", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/436_144.png", url: "https://d2idp3hzkhjpih.cloudfront.net/out/v1/4b85d9c2bf97413eb0c9fd875599b837/index_3.m3u8", epgId: "AstroAwani" },
+{ name: "Astro Awani", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/436_144.png", url: "https://d2idp3hzkhjpih.cloudfront.net/out/v1/4b85d9c2bf97413eb0c9fd875599b837/index_3.m3u8", kid: "", key: "", epgId: "AstroAwani" },
 { name: "Bernama TV", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/F3362D9E-20F0-483D-BA25-B3305233657A/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(bernama)/master.mpd", kid: "0c588bd14a1049eea04db9eea80e6c68", key: "57a5147c8537d8c7fead448d2a9587c7", epgId: "631" },
 { name: "Parlimen Malaysia", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/85286732-64A6-4885-B02A-ED0383F4319D/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(parlimen)/master.mpd", kid: "dce6cb3389014684b2abc82f6a478bff", key: "086c0ad70d90bbd9e39478dd0c2460b0", epgId: "633" },
 { name: "Al Jazeera", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/5410FF16-4BD0-47F5-91B9-DAC673523D53/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(AlJazeera)/master.mpd", kid: "b5c0678dad08451e955a53ee95aff30f", key: "a05ca10851a61c2933243b7169be6679", epgId: "602" },
 { name: "ABC Australia", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/F16A709A-F106-4164-8E34-DFD79461B61A/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(ABC)/master.mpd", kid: "a6349d2165514fa38fb6f1348679ba36", key: "1db75d2e54ff52806d84af64499685ff", epgId: "641" }
 ],
 chinese: [],
-// FIXED: Indian category - sedia untuk diisi channel
 indian: [],
-// NEW: Korean category - dengan Korean channels
 korean: [
 { name: "KBS World", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/161_144.png", url: "https://qp-pldt-live-bpk-01-prod.akamaized.net/bpk-tv/kbsworld/default/index.mpd", kid: "22ff2347107e4871aa423bea9c2bd363", key: "c6e7ba2f48b3a3b8269e8bc360e60404", epgId: "KBSWorld" },
-{ name: "tvN HD", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/190_144.png", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(tVNHD)/master.mpd",kid: "925fe1266db744a3b9524a23a6cc524b", key: "d1266e747e241339a539e54f26890286", epgId: "211" },
-{ name: "tvN Movies HD", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/8D56EE30-95BC-4047-B13F-CF2E5C5F84F8/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(tVnM)/master.mpd",kid: "52480b6651c243e2b48b04ab3ecf05ec", key: "aa3513df0bc2d949ee44c52204665d50", epgId: "201" },
-{ name: "TVING", logo: "https://via.placeholder.com/40?text=TVING", url: "https://example.com/tving.m3u8", epgId: "TVING" },
-{ name: "Wavve", logo: "https://via.placeholder.com/40?text=WAVVE", url: "https://example.com/wavve.m3u8", epgId: "Wavve" }
+{ name: "tvN HD", logo: "https://divign0fdw3sv.cloudfront.net/Images/ChannelLogo/contenthub/190_144.png", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(tVNHD)/master.mpd", kid: "925fe1266db744a3b9524a23a6cc524b", key: "d1266e747e241339a539e54f26890286", epgId: "211" },
+{ name: "tvN Movies HD", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/8D56EE30-95BC-4047-B13F-CF2E5C5F84F8/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(tVnM)/master.mpd", kid: "52480b6651c243e2b48b04ab3ecf05ec", key: "aa3513df0bc2d949ee44c52204665d50", epgId: "201" },
+{ name: "TVING", logo: "https://via.placeholder.com/40?text=TVING", url: "https://example.com/tving.m3u8", kid: "", key: "", epgId: "TVING" },
+{ name: "Wavve", logo: "https://via.placeholder.com/40?text=WAVVE", url: "https://example.com/wavve.m3u8", kid: "", key: "", epgId: "Wavve" }
 ],
 entertainment: [
 { name: "AXN", logo: "https://image-resizer-cloud-cdn.api.tmcms.quickplay.com/image/568841DF-E3B3-454A-9521-11813C6C0954/0-16x9.png?width=160&amp;updatedTime=0&amp;dt=Web", url: "https://unifi-live2.secureswiftcontent.com/Content/DASH/Live/channel(AXN)/master.mpd", kid: "4345340d92d64788bef7d99594cbe643", key: "c67f6e21ebbd520e31d4141b771d3867", epgId: "453" },
@@ -673,10 +779,10 @@ lifestyle: [
 
 // Isi dummy untuk kategori lain
 for (let i = 0; i < 3; i++) {
-channelData.news.push({ name: `News ${i+1}`, logo: "https://via.placeholder.com/40?text=NEWS", url: "https://example.com/news.m3u8", epgId: `News${i}` });
-channelData.chinese.push({ name: `Chinese ${i+1}`, logo: "https://via.placeholder.com/40?text=CHINESE", url: "https://example.com/chinese.ts", epgId: `Chi${i}` });
-channelData.indian.push({ name: `Indian ${i+1}`, logo: "https://via.placeholder.com/40?text=INDIAN", url: "https://example.com/indian.mpd", epgId: `Ind${i}` });
-channelData.entertainment.push({ name: `Hiburan ${i+1}`, logo: "https://via.placeholder.com/40?text=HIBURAN", url: "https://example.com/hiburan.m3u8", epgId: `Hib${i}` });
+channelData.news.push({ name: `News ${i+1}`, logo: "https://via.placeholder.com/40?text=NEWS", url: "https://example.com/news.m3u8", kid: "", key: "", epgId: `News${i}` });
+channelData.chinese.push({ name: `Chinese ${i+1}`, logo: "https://via.placeholder.com/40?text=CHINESE", url: "https://example.com/chinese.ts", kid: "", key: "", epgId: `Chi${i}` });
+channelData.indian.push({ name: `Indian ${i+1}`, logo: "https://via.placeholder.com/40?text=INDIAN", url: "https://example.com/indian.mpd", kid: "", key: "", epgId: `Ind${i}` });
+channelData.entertainment.push({ name: `Hiburan ${i+1}`, logo: "https://via.placeholder.com/40?text=HIBURAN", url: "https://example.com/hiburan.m3u8", kid: "", key: "", epgId: `Hib${i}` });
 }
 
 // ==================== VARIABEL GLOBAL ====================
@@ -745,7 +851,7 @@ let q = document.getElementById("search").value.toLowerCase();
 renderChannels(currentList.filter(c => c.name.toLowerCase().includes(q)));
 }
 
-// ==================== FUNGSI PLAY CHANNEL ====================
+// ==================== FUNGSI PLAY CHANNEL (UPDATED FOR SHAKA) ====================
 function playChannel(url, kid, key, epgId, name, logo) {
 // Simpan ke recent
 addToRecent({name, logo, url, kid, key, epgId});
@@ -753,19 +859,8 @@ addToRecent({name, logo, url, kid, key, epgId});
 // Set current channel
 currentChannel = {name, logo, url, kid, key, epgId};
 
-let config = {
-file: url,
-autostart: true,
-mute: false,
-volume: 75
-};
-
-if (kid && key && kid !== "" && key !== "") {
-config.drm = { clearkey: { keyId: kid, key: key } };
-}
-
-player.setup(config);
-player.setMute(false);
+// Play using Shaka Player
+playWithShaka(url, kid, key);
 
 // Load EPG
 loadEPG(epgId);
@@ -792,7 +887,6 @@ localStorage.setItem("recentChannels", JSON.stringify(recentChannels));
 renderRecent();
 }
 
-// FIXED: renderRecent function with better error handling for images
 function renderRecent() {
 let html = "";
 recentChannels.slice(0, 6).forEach(c => {
@@ -928,34 +1022,39 @@ menu.classList.toggle("show");
 }
 
 function switchAudio(lang) {
-let audioTracks = player.getAudioTracks();
-if (audioTracks && audioTracks.length > 0) {
-for (let i = 0; i < audioTracks.length; i++) {
-if (audioTracks[i].language && audioTracks[i].language.includes(lang)) {
-player.setCurrentAudioTrack(i);
-break;
-}
+try {
+let tracks = player.getVariantTracks();
+if (tracks && tracks.length > 0) {
+let audioTracks = tracks.filter(t => t.type === 'variant' && t.language && t.language.includes(lang));
+if (audioTracks.length > 0) {
+player.selectVariantTrack(audioTracks[0], true);
 }
 }
 document.getElementById("audioMenu").classList.remove("show");
-
-// Notifikasi
 alert(`Audio ditukar ke ${lang}`);
+} catch (e) {
+console.error('Error switching audio:', e);
+alert('Tidak dapat tukar audio untuk saluran ini');
+}
 }
 
 // ==================== SUBTITLE (CC) ====================
 function toggleSubtitles() {
-let tracks = player.getCaptionsList();
+try {
+let tracks = player.getTextTracks();
 if (tracks && tracks.length > 0) {
-// Toggle between first track and off
-let currentTrack = player.getCurrentCaptions();
+let currentTrack = player.getTextTracks().find(t => t.enabled);
 if (currentTrack) {
-player.setCurrentCaptions(null); // Off
+currentTrack.enabled = false;
 } else {
-player.setCurrentCaptions(tracks[0].track);
+player.selectTextTrack(tracks[0]);
 }
 } else {
 alert("Tiada track subtitle untuk saluran ini");
+}
+} catch (e) {
+console.error('Error toggling subtitles:', e);
+alert('Subtitle tidak tersedia');
 }
 }
 
@@ -1034,13 +1133,16 @@ if (prev >= 0) channels[prev].focus();
 }
 
 // Arrow Left/Right: Volume
+if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+e.preventDefault();
+if (videoElement) {
+let vol = videoElement.volume;
 if (e.key === 'ArrowLeft') {
-let vol = player.getVolume();
-player.setVolume(Math.max(0, vol - 5));
+videoElement.volume = Math.max(0, vol - 0.05);
+} else {
+videoElement.volume = Math.min(1, vol + 0.05);
 }
-if (e.key === 'ArrowRight') {
-let vol = player.getVolume();
-player.setVolume(Math.min(100, vol + 5));
+}
 }
 
 // Enter: Play selected channel
@@ -1051,10 +1153,12 @@ document.activeElement.click();
 // Space: Play/Pause
 if (e.key === ' ') {
 e.preventDefault();
-if (player.getState() === 'playing') {
-player.pause();
+if (videoElement) {
+if (videoElement.paused) {
+videoElement.play();
 } else {
-player.play();
+videoElement.pause();
+}
 }
 }
 
@@ -1075,17 +1179,22 @@ togglePIP();
 });
 
 // ==================== INIT ====================
+// Inisialisasi Shaka Player
+window.onload = function() {
+// Init Shaka
+shaka.polyfill.installAll();
+if (shaka.Player.isBrowserSupported()) {
+initShakaPlayer();
+} else {
+console.error('Browser tidak support Shaka Player');
+document.getElementById('epgBar').innerHTML = 'Browser tidak support playback';
+}
+
+// Show default category
 showCat('malaysia');
 renderRecent();
 resetRecentFade();
-
-// Pastikan tak mute
-if (player) {
-player.on('ready', function() {
-player.setMute(false);
-player.setVolume(75);
-});
-}
+};
 
 // Close audio menu bila klik kat lain
 document.addEventListener('click', function(e) {
@@ -1100,7 +1209,7 @@ resetRecentFade();
 });
 
 // Debug - check if channels are loaded
-console.log("EJALTV Pro Ultimate - Ready!");
+console.log("EJALTV Pro Ultimate with Shaka Player - Ready!");
 </script>
 </body>
 </html>
